@@ -1,0 +1,1 @@
+{"base_url": "https://www.amazon.de/dp/", "xpath_selector": "//*[@id='priceblock_ourprice']", "email": {"smtp_url": "SMPT-URL", "password": "PASSWORD", "user": "USERNAME"}, "items": [["B00DC3E4BS", 43.99, "Final Fantasy XV"]]}
