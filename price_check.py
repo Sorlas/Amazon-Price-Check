@@ -38,20 +38,27 @@ def send_email(price, url, email_info, article):
 
 
 def get_price(url, selector):
+    #Get Wegpage content
     r = requests.get(url, headers={
         'User-Agent':
             'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
             '(KHTML, like Gecko) Chrome/52.0.2743.82 Safari/537.36'
     })
+    #Raises Excpetion if occured
     r.raise_for_status()
-    tree = html.fromstring(r.text)
+    htmlfile = r.text
+    price_string = re.findall('(<span id="priceblock_(our|deal)price" class="a-size-medium a-color-price">)(\w+\s\d+(,|\.)\d+)', htmlfile)
     try:
-        # extract the price from the string
-        price_string = re.findall('\d+.\d+', tree.xpath(selector)[0].text)[0]
-        print(price_string)
-        return float(price_string.replace(',', '.'))
-    except IndexError, TypeError:
-        print('Didn\'t find the \'price\' element, trying again later...')
+        match = False
+        while not match:
+            for i in price_string[0]:
+                if (i.find("EUR") != -1):
+                    match = True
+                    price_string = re.findall('(\d+(,|\.)\d+)', i)[0][0]
+    except Exception:
+        print("Cannot find price string")
+    price = float(price_string.replace(',', '.'))
+    return price
 
 
 def get_config(config):
