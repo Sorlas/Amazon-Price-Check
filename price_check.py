@@ -37,7 +37,7 @@ def send_email(price, url, email_info, article):
         print('Message has been sent.')
 
 
-def get_price(url, selector):
+def get_price(url, extractor):
     #Get Wegpage content
     r = requests.get(url, headers={
         'User-Agent':
@@ -47,18 +47,30 @@ def get_price(url, selector):
     #Raises Excpetion if occured
     r.raise_for_status()
     htmlfile = r.text
-    price_string = re.findall('(<span id="priceblock_(our|deal)price" class="a-size-medium a-color-price">)(\w+\s\d+(,|\.)\d+)', htmlfile)
+    if extractor == "amazon":
+        price_string = re.findall('(<span id="priceblock_(our|deal)price" class="a-size-medium a-color-price">)(\w+\s\d+(,|\.)\d+)', htmlfile)
+    elif extractor == "alternate":
+        price_string = re.findall('(<span itemprop="price" content=")(\d+(.|,)\d+)', htmlfile)
+    else:
+        print('ERROR: Could not find Extractor')
+
     try:
         match = False
         while not match:
-            for i in price_string[0]:
-                if (i.find("EUR") != -1):
-                    match = True
-                    price_string = re.findall('(\d+(,|\.)\d+)', i)[0][0]
+            if extractor == 'amazon':
+                for i in price_string[0]:
+                    if (i.find("EUR") != -1):
+                        match = True
+                        price_string = re.findall('(\d+(,|\.)\d+)', i)[0][0]
+            elif extractor == 'alternate':
+                price_string = price_string[0][1]
+                print(price_string)
+                match = True
+        price = float(price_string.replace(',', '.'))
+        return price
     except Exception:
-        print("Cannot find price string")
-    price = float(price_string.replace(',', '.'))
-    return price
+        print("ERROR: Cannot find price string")
+        return 0
 
 
 def get_config(config):
@@ -68,12 +80,10 @@ def get_config(config):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config',
-                        default='%s/config.json' % os.path.dirname(
-                            os.path.realpath(__file__)),
-                        help='Configuration file path')
-    parser.add_argument('-t', '--poll-interval', type=int, default=3600,
-                        help='Time in seconds between checks')
+    parser.add_argument('-x', '--extractor', default='amazon', help='Which extractor to use. Default amazon')
+    parser.add_argument('-c', '--config',default='%s/config.json' % os.path.dirname(os.path.realpath(__file__)), help='Configuration file path')
+    parser.add_argument('-t', '--poll-interval', type=int, default=3600, help='Time in seconds between checks, default 1 hour')
+    parser.add_argument('-r', '--random-poll', action='store_true', help='Adds 1 to 10 min to poll intervall randomly')
     parser.add_argument('-o', '--outputfile', default='%s/price_history.txt' % os.path.dirname(os.path.realpath(__file__)), help='History filename for history data, default = price_history.txt')
     parser.add_argument('-e', '--endless', action='store_true', help='Endless Run')
     return parser.parse_args()
@@ -82,13 +92,13 @@ def write_config(config, data):
     with open(config, 'w') as f:
         json.dump(data, f)
 
-def compare_prices(items, config, history_file):
+def compare_prices(items, config, history_file, extractor):
     prices_updated = False
 
     for item in copy(items):
         print('Checking price for %s (should be lower than %s)' % (item[2], item[1]))
         item_page = urlparse.urljoin(config['base_url'], item[0])
-        price = get_price(item_page, config['xpath_selector'])
+        price = get_price(item_page, extractor)
         price_file = open(history_file, 'a')
 
         price_file.write("%s;%s;%s;%s\n" % (time.strftime("%d/%m/%Y"), time.strftime("%H:%M:%S"), price, str(item[2])))
@@ -109,10 +119,12 @@ def compare_prices(items, config, history_file):
     else:
         return False
 
-def wait(poll_interval, endless):
-    random_number = randint(60,600)
-    if endless:
+def wait(poll_interval, random=False):
+    if random:
+        random_number = randint(60,600)
         random_number += poll_interval
+    else:
+        random_number = poll_interval
     print('Sleeping for %d seconds' % random_number)
     time.sleep(random_number)
 
@@ -123,11 +135,11 @@ def main():
 
     if args.endless:
         while True and len(items):
-            if compare_prices(items, config, args.outputfile):
+            if compare_prices(items, config, args.outputfile, args.extractor):
                 write_config(args.config, config)
-            wait(args.poll_interval, args.endless)
+            wait(args.poll_interval, args.random_poll)
     else:
-        wait(args.poll_interval, args.endless)
+        wait(args.poll_interval, args.random_poll)
         if compare_prices(items, config, args.outputfile):
             write_config(args.config, config)
 
