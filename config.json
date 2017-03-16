@@ -1,1 +1,22 @@
-{"base_url": "https://www.amazon.de/dp/", "xpath_selector": "//*[@id='priceblock_ourprice']", "email": {"smtp_url": "SMPT-URL", "password": "PASSWORD", "user": "USERNAME"}, "items": [["B00DC3E4BS", 43.99, "Final Fantasy XV"]]}
+{
+    "email": {
+        "password": "PASSWORD",
+        "smtp_url": "SMPT-URL",
+        "user": "USERNAME"
+    },
+    "items": [
+        [
+            "https://www.amazon.de/dp/B00JM0BYDQ",
+            21.49,
+            "Coffee Machine"
+        ],
+        [
+            "https://www.amazon.de/dp/B01D1Y28EW",
+            3.95,
+            "Darwin Quartett"
+        ]
+    ],
+    "listid": 1,
+    "regex": "<span id=\"priceblock_(our|sale)price\" class=\"a-size-medium a-color-price\">\\w+\\s(\\d+,\\d+)",
+    "type": "amazon"
+}

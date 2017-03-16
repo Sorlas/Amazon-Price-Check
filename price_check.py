@@ -7,7 +7,6 @@ import time
 import requests
 import smtplib
 import argparse
-import urlparse
 import sys
 import time
 from random import randint
@@ -23,6 +22,8 @@ def send_email(price, url, email_info, article):
         s.login(str(email_info['user']), str(email_info['password']))
     except smtplib.SMTPAuthenticationError:
         print('Failed to login')
+    except Exception:
+        print('Someting Wong')
     else:
         print('Logged in! Composing message..')
         msg = MIMEMultipart('alternative')
@@ -37,7 +38,7 @@ def send_email(price, url, email_info, article):
         print('Message has been sent.')
 
 
-def get_price(url, extractor):
+def get_price(url, regex, listid):
     #Get Wegpage content
     r = requests.get(url, headers={
         'User-Agent':
@@ -47,25 +48,26 @@ def get_price(url, extractor):
     #Raises Excpetion if occured
     r.raise_for_status()
     htmlfile = r.text
-    if extractor == "amazon":
-        price_string = re.findall('(<span id="priceblock_(our|deal)price" class="a-size-medium a-color-price">)(\w+\s\d+(,|\.)\d+)', htmlfile)
-    elif extractor == "alternate":
-        price_string = re.findall('(<span itemprop="price" content=")(\d+(.|,)\d+)', htmlfile)
-    else:
-        print('ERROR: Could not find Extractor')
+
+    price_string = re.findall(regex, htmlfile)
+    try:
+        if not type(listid) is int:
+            raise TypeError
+        else:
+            if listid < 0:
+                raise ValueError
+    except TypeError:
+        print('ListID is not of type Integer')
+        return 0
+    except ValueError:
+        print('ListID must be >= 0')
+        return 0
+    except Exception:
+        print('Unhandled error with ListID')
+        return 0
 
     try:
-        match = False
-        while not match:
-            if extractor == 'amazon':
-                for i in price_string[0]:
-                    if (i.find("EUR") != -1):
-                        match = True
-                        price_string = re.findall('(\d+(,|\.)\d+)', i)[0][0]
-            elif extractor == 'alternate':
-                price_string = price_string[0][1]
-                print(price_string)
-                match = True
+        price_string = price_string[0][listid]
         price = float(price_string.replace(',', '.'))
         return price
     except Exception:
@@ -80,7 +82,6 @@ def get_config(config):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-x', '--extractor', default='amazon', help='Which extractor to use. Default amazon')
     parser.add_argument('-c', '--config',default='%s/config.json' % os.path.dirname(os.path.realpath(__file__)), help='Configuration file path')
     parser.add_argument('-t', '--poll-interval', type=int, default=3600, help='Time in seconds between checks, default 1 hour')
     parser.add_argument('-r', '--random-poll', action='store_true', help='Adds 1 to 10 min to poll intervall randomly')
@@ -90,22 +91,23 @@ def parse_args():
 
 def write_config(config, data):
     with open(config, 'w') as f:
-        json.dump(data, f)
+        json.dump(data, f, indent=4, sort_keys=True)
 
-def compare_prices(items, config, history_file, extractor):
+def compare_prices(items, config, history_file):
     prices_updated = False
 
     for item in copy(items):
         print('Checking price for %s (should be lower than %s)' % (item[2], item[1]))
-        item_page = urlparse.urljoin(config['base_url'], item[0])
-        price = get_price(item_page, extractor)
-        price_file = open(history_file, 'a')
+        item_page = item[0]
+        price = get_price(item_page, config['regex'], config['listid'])
 
-        price_file.write("%s;%s;%s;%s\n" % (time.strftime("%d/%m/%Y"), time.strftime("%H:%M:%S"), price, str(item[2])))
+        if(history_file != "NONE"):
+            price_file = open(history_file, 'a')
+            price_file.write("%s;%s;%s;%s\n" % (time.strftime("%d/%m/%Y"), time.strftime("%H:%M:%S"), price, str(item[2])))
+
         if not price:
             continue
         elif price < item[1]:
-            price_file.close()
             print('Price is %s!! Trying to send email.' % price)
             send_email(price, item_page, config['email'], item[2])
             print('Updating config for new price!')
@@ -113,11 +115,10 @@ def compare_prices(items, config, history_file, extractor):
             prices_updated = True
         else:
             print('Price is %s. Ignoring...' % price)
+
+        if(history_file != "NONE"):
             price_file.close()
-    if prices_updated:
-        return True
-    else:
-        return False
+    return prices_updated
 
 def wait(poll_interval, random=False):
     if random:
@@ -135,11 +136,10 @@ def main():
 
     if args.endless:
         while True and len(items):
-            if compare_prices(items, config, args.outputfile, args.extractor):
+            if compare_prices(items, config, args.outputfile):
                 write_config(args.config, config)
             wait(args.poll_interval, args.random_poll)
     else:
-        wait(args.poll_interval, args.random_poll)
         if compare_prices(items, config, args.outputfile):
             write_config(args.config, config)
 
