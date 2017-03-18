@@ -80,7 +80,7 @@ def update_items(items, email_credentials):
         current_historyfile = item['historyfile']
 
         for each_item in current_items:
-            print('Checking', each_item[2])
+            print('\nChecking', each_item[2])
             current_price = get_price(each_item[0], current_regex, current_listid)
             if (current_price < each_item[1]):
                 print('New price is', current_price, '!!')
