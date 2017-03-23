@@ -97,16 +97,17 @@ def update_items(items, email_credentials):
             if (current_price < all_time_low_price):
                 print('New price is', current_price, '!!')
                 all_time_low_price = current_price
+                last_price = current_price
                 prices_updated = True
                 send_email(current_price, item_url, item_name, email_credentials, True)
-            elif(current_price > last_price):
-                print('Price has changed, it\'s now:' % current_price)
+            elif(current_price != last_price):
+                print('Price has changed, it\'s now:', current_price)
                 last_price = current_price
                 prices_updated = True
                 if(notify_on_every_change):
                     send_email(current_price, item_url, item_name, email_credentials)
             else:
-                print('Price hasn\'t changed...')
+                print('Price is at %.2f hasn\'t changed...' % current_price)
             if(current_historyfile != 'NONE'):
                 write_history(current_historyfile, current_price, each_item[2])
             else:
