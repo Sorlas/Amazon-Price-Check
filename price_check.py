@@ -14,12 +14,14 @@ from lxml import html
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-def send_email(price, url, article, email_credentials):
+def send_email(price, url, article, email_credentials, new_alltime_low_bool=False):
     try:
         s = smtplib.SMTP_SSL(email_credentials['smtp_url'])
         s.login(str(email_credentials['user']), str(email_credentials['password']))
     except smtplib.SMTPAuthenticationError:
         print('Failed to login')
+    except smtplib.SMTPConnectError:
+        print('Failed to connect to SMTP server')
     except Exception:
         print('Someting Wong with Email sending')
     else:
@@ -28,7 +30,10 @@ def send_email(price, url, article, email_credentials):
         msg['Subject'] = '%s Price Alert - %s' % (article, price)
         msg['From'] = email_credentials['user']
         msg['To'] = email_credentials['user']
-        text = '%s price has a new all time low!\nThe price is currently %s !! URL to salepage: %s' % (article, price, url)
+        if (new_alltime_low_bool):
+            text = '%s price has a new all time low!\nThe price is currently %s !! URL to salepage: %s' % (article, price, url)
+        else:
+            text = '%s price has changed\nThe price is currently %s !! URL to salepage: %s' % (article, price, url)
         part = MIMEText(text, 'plain')
         msg.attach(part)
         s.sendmail(str(email_credentials['user']), str(email_credentials['user']), msg.as_string())
@@ -78,21 +83,38 @@ def update_items(items, email_credentials):
         current_listid = item['listid']
         current_items = item['item']
         current_historyfile = item['historyfile']
+        notify_on_every_change = item['notify_on_every_change']
 
         for each_item in current_items:
-            print('\nChecking', each_item[2])
-            current_price = get_price(each_item[0], current_regex, current_listid)
-            if (current_price < each_item[1]):
+            item_url = each_item[0]
+            last_price = each_item[1]
+            all_time_low_price = each_item[2]
+            item_name = each_item[3]
+
+
+            print('\nChecking', item_name)
+            current_price = get_price(item_url, current_regex, current_listid)
+            if (current_price < all_time_low_price):
                 print('New price is', current_price, '!!')
-                each_item[1] = current_price
+                all_time_low_price = current_price
                 prices_updated = True
-                send_email(current_price, each_item[0], each_item[2], email_credentials)
+                send_email(current_price, item_url, item_name, email_credentials, True)
+            elif(current_price > last_price):
+                print('Price has changed, it\'s now:' % current_price)
+                last_price = current_price
+                prices_updated = True
+                if(notify_on_every_change):
+                    send_email(current_price, item_url, item_name, email_credentials)
             else:
-                print('Price is %.2f not lower than before...' % current_price)
+                print('Price hasn\'t changed...')
             if(current_historyfile != 'NONE'):
                 write_history(current_historyfile, current_price, each_item[2])
             else:
                 print('No history file requested, omitting...')
+
+            if (prices_updated == True):
+                each_item[1] = last_price
+                each_item[2] = all_time_low_price
     return prices_updated
 
 

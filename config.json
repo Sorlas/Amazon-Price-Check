@@ -10,29 +10,34 @@
             "item": [
                 [
                     "https://www.amazon.de/dp/B00JM0BYDQ",
+                    100,
                     99.99,
                     "Coffee Machine"
                 ],
                 [
                     "https://www.amazon.de/dp/B01D1Y28EW",
+                    50,
                     41.95,
                     "Darwin Quartett"
                 ]
             ],
             "listid": 1,
-            "regex": "<span id=\"priceblock_(our|sale)price\" class=\"a-size-medium a-color-price\">\\w+\\s(\\d+,\\d+)"
+            "regex": "<span id=\"priceblock_(our|sale)price\" class=\"a-size-medium a-color-price\">\\w+\\s(\\d+,\\d+)",
+            "notify_on_every_change": "True"
         },
         {
             "historyfile": "Alternate_history.txt",
             "item": [
                 [
                     "https://www.alternate.de/html/product/1319413",
+                    40,
                     30.99,
                     "Coffeblender"
                 ]
             ],
             "listid": 0,
-            "regex": "<span itemprop=\"price\" content=\"(\\d+.\\d+)"
+            "regex": "<span itemprop=\"price\" content=\"(\\d+.\\d+)",
+            "notify_on_every_change": "True"
         }
     ]
 }
