@@ -14,6 +14,10 @@ from lxml import html
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+glob_message_all_time_low = ''
+glob_message_changed = ''
+glob_message_title = ''
+
 def send_email(price, url, article, email_credentials, new_alltime_low_bool=False):
     try:
         s = smtplib.SMTP_SSL(email_credentials['smtp_url'])
@@ -31,9 +35,9 @@ def send_email(price, url, article, email_credentials, new_alltime_low_bool=Fals
         msg['From'] = email_credentials['user']
         msg['To'] = email_credentials['user']
         if (new_alltime_low_bool):
-            text = '%s price has a new all time low!\nThe price is currently %s !! URL to salepage: %s' % (article, price, url)
+            text = glob_message_all_time_low % (article, price, url)
         else:
-            text = '%s price has changed\nThe price is currently %s !! URL to salepage: %s' % (article, price, url)
+            text = glob_message_changed % (article, price, url)
         part = MIMEText(text, 'plain')
         msg.attach(part)
         s.sendmail(str(email_credentials['user']), str(email_credentials['user']), msg.as_string())
@@ -173,6 +177,36 @@ def write_history(history_file, price, itemname):
 def main():
     args = parse_arguments()
     config = read_config(args.config)
+    global glob_message_changed
+    global glob_message_all_time_low
+    global glob_message_title
+
+    try:
+        glob_message_all_time_low = config['email']['message_all_time_low']
+        if(glob_message_all_time_low.count("%s") != 3):
+            print('Amount of reguired place holders \"%s\" is not 3!\n')
+            raise Exception()
+    except Exception:
+        print('Failed to set message for all time low!\n')
+        glob_message_all_time_low = '%s price has a new all time low!\nThe price is currently %s !! URL to salepage: %s'
+
+    try:
+        glob_message_changed = config['email']['message_changed']
+        if(glob_message_changed.count("%s") != 3):
+            print('Amount of reguired place holders \"%s\" is not 3! Falling back to standard')
+            raise Exception()
+    except Exception:
+        print('Failed to set message for price change! Using standard')
+        glob_message_changed = '%s price has changed\nThe price is currently %s !! URL to salepage: %s'
+
+    try:
+        glob_message_title = config['email']['message_title']
+        if(glob_message_title.count("%s") != 2):
+            print('Amount of reguired place holders \"%s\" is not 2! Falling back to standard')
+            raise Exception()
+    except Exception:
+        print('Failed to set message title! Using standard')
+        glob_message_title = '%s Price Alert - %s'
 
     if args.endless:
         while(True):
@@ -180,7 +214,8 @@ def main():
                 write_config(args.config, config)
             wait(args.random_poll, args.poll_interval)
     else:
-        update_prices(config)
+        if(update_items(config['items'], config['email'])):
+            write_config(args.config, config)
 
 if __name__ == '__main__':
 	main()

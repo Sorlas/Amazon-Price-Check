@@ -2,7 +2,10 @@
     "email": {
         "password": "PASSWORD",
         "smtp_url": "SMPT-URL",
-        "user": "USERNAME"
+        "user": "USERNAME",
+        "message_all_time_low": "Article: %s reached an all time low of %s\n%s",
+        "message_changed": "Article: %s price has changed to %s\n%s",
+        "message_title": "%s Price Alert - %s"
     },
     "items": [
         {
