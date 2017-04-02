@@ -38,7 +38,7 @@ def send_email(price, url, article, email_credentials, new_alltime_low_bool=Fals
             text = glob_message_all_time_low % (article, price, url)
         else:
             text = glob_message_changed % (article, price, url)
-        part = MIMEText(text, 'plain')
+        part = MIMEText(text, 'plain', _charset='utf-8')
         msg.attach(part)
         s.sendmail(str(email_credentials['user']), str(email_credentials['user']), msg.as_string())
         print('Message has been sent.')
