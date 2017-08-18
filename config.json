@@ -1,11 +1,11 @@
 {
     "email": {
-        "password": "PASSWORD",
-        "smtp_url": "SMPT-URL",
-        "user": "USERNAME",
         "message_all_time_low": "Article: %s reached an all time low of %s\n%s",
         "message_changed": "Article: %s price has changed to %s\n%s",
-        "message_title": "%s Price Alert - %s"
+        "message_title": "%s Price Alert - %s",
+        "password": "PASSWORD",
+        "smtp_url": "SMPT-URL",
+        "user": "USERNAME"
     },
     "items": [
         {
@@ -13,34 +13,34 @@
             "item": [
                 [
                     "https://www.amazon.de/dp/B00JM0BYDQ",
-                    100,
-                    99.99,
+                    20.99,
+                    20.99,
                     "Coffee Machine"
                 ],
                 [
                     "https://www.amazon.de/dp/B01D1Y28EW",
-                    50,
-                    41.95,
+                    3.95,
+                    3.95,
                     "Darwin Quartett"
                 ]
             ],
             "listid": 1,
-            "regex": "<span id=\"priceblock_(our|sale)price\" class=\"a-size-medium a-color-price\">\\w+\\s(\\d+,\\d+)",
-            "notify_on_every_change": "True"
+            "notify_on_every_change": "True",
+            "regex": "<span id=\"priceblock_(our|sale)price\" class=\"a-size-medium a-color-price\">\\w+\\s(\\d+,\\d+)"
         },
         {
             "historyfile": "Alternate_history.txt",
             "item": [
                 [
                     "https://www.alternate.de/html/product/1319413",
-                    40,
+                    30.99,
                     30.99,
                     "Coffeblender"
                 ]
             ],
             "listid": 0,
-            "regex": "<span itemprop=\"price\" content=\"(\\d+.\\d+)",
-            "notify_on_every_change": "True"
+            "notify_on_every_change": "True",
+            "regex": "<span itemprop=\"price\" content=\"(\\d+.\\d+)"
         }
     ]
 }

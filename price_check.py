@@ -10,7 +10,6 @@ import sys
 import time
 from random import randint
 from copy import copy
-from lxml import html
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
