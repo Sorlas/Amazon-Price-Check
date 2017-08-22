@@ -5,7 +5,8 @@
         "message_title": "%s Price Alert - %s",
         "password": "PASSWORD",
         "smtp_url": "SMPT-URL",
-        "user": "USERNAME"
+        "user": "USERNAME",
+		"receiver": "testemail@testmail.cc.gg.test"
     },
     "items": [
         {

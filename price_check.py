@@ -16,8 +16,11 @@ from email.mime.text import MIMEText
 glob_message_all_time_low = ''
 glob_message_changed = ''
 glob_message_title = ''
+glob_debug = False
 
 def send_email(price, url, article, email_credentials, new_alltime_low_bool=False):
+    if glob_debug:
+        print("Completely skipping email creation")
     try:
         s = smtplib.SMTP_SSL(email_credentials['smtp_url'])
         s.login(str(email_credentials['user']), str(email_credentials['password']))
@@ -32,7 +35,7 @@ def send_email(price, url, article, email_credentials, new_alltime_low_bool=Fals
         msg = MIMEMultipart('alternative')
         msg['Subject'] = '%s Price Alert - %s' % (article, price)
         msg['From'] = email_credentials['user']
-        msg['To'] = email_credentials['user']
+        msg['To'] = email_credentials['receiver']
         if (new_alltime_low_bool):
             text = glob_message_all_time_low % (article, price, url)
         else:
@@ -48,22 +51,28 @@ def parse_arguments():
     parser.add_argument('-p', '--poll-interval', type=int, default=3600, help='Time in seconds between checks, default 1 hour')
     parser.add_argument('-r', '--random-poll', type=int, default=0, help='Random wait time between 0 and input to add to poll-interval')
     parser.add_argument('-e', '--endless', action='store_true', help='Endless Run')
+    parser.add_argument('-d', '--dump-html', action='store_true', help='Stores all html files in /html-dump')
+    parser.add_argument('-x', '--debug', action='store_true', help='Sets debug flag. Will not send email and produce extended output')
     return parser.parse_args()
 
 def read_config(config_file):
+    if glob_debug:
+        print("Reading Config File...")
     try:
         with open(config_file, 'r') as f:
             return json.loads(f.read())
-    except Exception:
+    except Exception as e:
         print('Failed to open config file')
+        print(e)
         exit()
 
 def write_config(config_file, data):
     try:
         with open(config_file, 'w') as f:
             json.dump(data, f, indent=4, sort_keys=True)
-    except Exception:
-        print('failed to write config file!')
+    except Exception as e:
+        print('Failed to write config file!')
+        print(e)
 
 def wait(random, waittime):
     #No unsigned datatype, so just convert any negative to positive
@@ -79,9 +88,11 @@ def wait(random, waittime):
     print('Sleeping for', random_wait_time, 'seconds')
     time.sleep(random_wait_time)
 
-def update_items(items, email_credentials):
+def update_items(items, email_credentials, html_dump):
     prices_updated = False
     for item in items:
+        if glob_debug:
+            print("Processing items...")
         current_regex = item['regex']
         current_listid = item['listid']
         current_items = item['item']
@@ -89,6 +100,8 @@ def update_items(items, email_credentials):
         notify_on_every_change = item['notify_on_every_change']
 
         for each_item in current_items:
+            if glob_debug:
+                print("Processing item", each_item[3])
             item_url = each_item[0]
             last_price = each_item[1]
             all_time_low_price = each_item[2]
@@ -96,7 +109,7 @@ def update_items(items, email_credentials):
 
 
             print('\nChecking', item_name)
-            current_price = get_price(item_url, current_regex, current_listid)
+            current_price = get_price(item_url, current_regex, current_listid, html_dump, item_name)
             if (current_price < all_time_low_price):
                 print('New price is', current_price, '!!')
                 all_time_low_price = current_price
@@ -121,19 +134,76 @@ def update_items(items, email_credentials):
                 each_item[2] = all_time_low_price
     return prices_updated
 
+def create_folder(foldername):
+    try:
+        if not os.path.exists(foldername):
+            os.makedirs(foldername)
+    except OSError:
+        print("Cannot create folders")
+        exit()
 
-def get_price(URL, regex, regex_price_id):
+def get_random_header():
+    header_list = list()
+
+    #Chrome
+    current_dict = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.101 Safari/537.36'}
+    header_list.append(current_dict)
+
+    #IE
+    current_dict = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko'}
+    header_list.append(current_dict)
+
+    #Firefox
+    current_dict = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1'}
+    header_list.append(current_dict)
+
+    rand = randint(1,20)
+    if rand <= 14:
+        if glob_debug:
+            print("Using header Chrome\n", header_list[0])
+        return header_list[0]
+    elif rand > 14 and rand <= 18:
+        if glob_debug:
+            print("Using header Firefox\n", header_list[2])
+        return header_list[2]
+    else:
+        if glob_debug:
+            print("Using header IE\n", header_list[1])
+        return header_list[1]
+
+def get_price(URL, regex, regex_price_id, html_dump, item_name):
     #Get Wegpage content
-    r = requests.get(URL, headers={
-        'User-Agent':
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
-            '(KHTML, like Gecko) Chrome/52.0.2743.82 Safari/537.36'
-    })
+    r = requests.get(URL, headers=get_random_header())
     #Raises Excpetion if occured
     r.raise_for_status()
     htmlfile = r.text
 
+    if glob_debug:
+        print("Fetched URL, got", len(htmlfile), "bytes")
+
+    if html_dump:
+        create_folder("html-dump")
+
+        if glob_debug:
+            print("Dumping html for", item_name)
+
+        time_stamp = time.time()
+        filepath = "html-dump/" + item_name + " - " + str(time_stamp) + ".html"
+
+        if glob_debug:
+            print("File(path) set to:", filepath)
+
+        with open(filepath, mode='w', encoding='utf-8') as f:
+            f.write(htmlfile)
+
+    if glob_debug:
+        print("Read in regex from config is:\n", regex)
+
     price_string = re.findall(regex, htmlfile)
+
+    if glob_debug:
+        print("Extracted price string:", price_string)
+        print("With type:", type(price_string))
 
     try:
         if not type(regex_price_id) is int:
@@ -162,8 +232,10 @@ def get_price(URL, regex, regex_price_id):
             price = price_string[0][regex_price_id]
             price = float(price.replace(',', '.'))
             return price
-        except Exception:
+        except Exception as e:
             print("ERROR: Cannot find price string")
+            print("Price String was:", price)
+            print(e)
             return 0
 
 def write_history(history_file, price, itemname):
@@ -175,6 +247,10 @@ def write_history(history_file, price, itemname):
 
 def main():
     args = parse_arguments()
+    global glob_debug
+
+    glob_debug = args.debug
+
     config = read_config(args.config)
     global glob_message_changed
     global glob_message_all_time_low
@@ -209,11 +285,12 @@ def main():
 
     if args.endless:
         while(True):
-            if(update_items(config['items'], config['email'])):
+            if(update_items(config['items'], config['email'], args.dump_html)):
                 write_config(args.config, config)
             wait(args.random_poll, args.poll_interval)
+            sys.stdout.flush()
     else:
-        if(update_items(config['items'], config['email'])):
+        if(update_items(config['items'], config['email'], args.dump_html)):
             write_config(args.config, config)
 
 if __name__ == '__main__':
