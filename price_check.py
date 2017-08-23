@@ -21,6 +21,7 @@ glob_debug = False
 def send_email(price, url, article, email_credentials, new_alltime_low_bool=False):
     if glob_debug:
         print("Completely skipping email creation")
+        return
     try:
         s = smtplib.SMTP_SSL(email_credentials['smtp_url'])
         s.login(str(email_credentials['user']), str(email_credentials['password']))
@@ -42,8 +43,14 @@ def send_email(price, url, article, email_credentials, new_alltime_low_bool=Fals
             text = glob_message_changed % (article, price, url)
         part = MIMEText(text, 'plain', _charset='utf-8')
         msg.attach(part)
-        s.sendmail(str(email_credentials['user']), str(email_credentials['user']), msg.as_string())
-        print('Message has been sent.')
+        try:
+            s.sendmail(str(email_credentials['user']), str(email_credentials['user']), msg.as_string())
+            print('Message has been sent.')
+            s.quit()
+        except Exception as e:
+            print("Failed to send email!")
+            print(e)
+            s.quit()
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
@@ -132,6 +139,7 @@ def update_items(items, email_credentials, html_dump):
             if (prices_updated == True):
                 each_item[1] = last_price
                 each_item[2] = all_time_low_price
+            wait(90, 23) #wait between polling items
     return prices_updated
 
 def create_folder(foldername):
@@ -175,11 +183,23 @@ def get_price(URL, regex, regex_price_id, html_dump, item_name):
     #Get Wegpage content
     r = requests.get(URL, headers=get_random_header())
     #Raises Excpetion if occured
-    r.raise_for_status()
+    try:
+        r.raise_for_status()
+    except Exception as e:
+        print(e)
+        return 0
     htmlfile = r.text
 
     if glob_debug:
-        print("Fetched URL, got", len(htmlfile), "bytes")
+        length = len(htmlfile)
+        unit = "bytes"
+        if length >= 1024:
+            length = round(length / 1024)
+            unit = "kBytes"
+            if length >= 1024:
+                length = round(length / 1024)
+                unit = "MBytes"
+        print("Fetched URL, got", length, unit)
 
     if html_dump:
         create_folder("html-dump")
@@ -287,8 +307,8 @@ def main():
         while(True):
             if(update_items(config['items'], config['email'], args.dump_html)):
                 write_config(args.config, config)
-            wait(args.random_poll, args.poll_interval)
             sys.stdout.flush()
+            wait(args.random_poll, args.poll_interval)
     else:
         if(update_items(config['items'], config['email'], args.dump_html)):
             write_config(args.config, config)

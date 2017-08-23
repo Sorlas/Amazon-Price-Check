@@ -18,8 +18,12 @@ The standart poll interval is set to 1h. If the endless flag is not set a random
 
   -c CONFIG, --config CONFIG							Configuration file
 
+  -d, --dump-html										Dumps the html in the folder html-dump every time it's been requested.
+  
   -p POLL_INTERVAL, --poll-interval POLL_INTERVAL		Time in seconds between checks, default 1 hour
 
   -r RANDOM_POLL, --random-poll RANDOM_POLL				Random wait time between 0 and input to add to poll-interval
 
   -e, --endless         								Endless Run
+  
+  -x, --debug											Shows additional debug information and does not send an email
