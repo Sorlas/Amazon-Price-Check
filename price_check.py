@@ -8,6 +8,7 @@ import smtplib
 import argparse
 import sys
 import time
+import datetime
 from random import randint
 from copy import copy
 from email.mime.multipart import MIMEMultipart
@@ -60,6 +61,7 @@ def parse_arguments():
     parser.add_argument('-e', '--endless', action='store_true', help='Endless Run')
     parser.add_argument('-d', '--dump-html', action='store_true', help='Stores all html files in /html-dump')
     parser.add_argument('-x', '--debug', action='store_true', help='Sets debug flag. Will not send email and produce extended output')
+    parser.add_argument('-n', '--nighttime', action='store_true', default=False, help='Disables updates in nighttime, specified in config json')
     return parser.parse_args()
 
 def read_config(config_file):
@@ -265,6 +267,51 @@ def write_history(history_file, price, itemname):
     with open(history_file, 'a') as history:
         history.write("%s;%s;%s;%s\n" % (current_date, current_time, price, itemname))
 
+def nighttime_to_tuple(config_nighttime):
+    error = False
+    if config_nighttime['start'] == "00:00" and config_nighttime['stop'] == "00:00":
+        print("No night time sleep requested")
+    try:
+        start_time = datetime.datetime.strptime(config_nighttime['start'], '%H:%M').time()
+    except Exception as e:
+        print("Could not convert start of nighttime to datetime object.")
+        print("Start time in config:", config_nighttime['start'])
+        print(e)
+    try:
+        stop_time = datetime.datetime.strptime(config_nighttime['stop'], '%H:%M').time()
+    except Exception as e:
+        print("Could not convert stop of nighttime to datetime object.")
+        print("Stop time in config:", config_nighttime['start'])
+        print(e)
+
+    if error:
+        raise ValueError
+    else:
+        return (start_time, stop_time)
+
+def wait_nighttime(nighttime_tuple):
+    now = datetime.datetime.now()
+    start = datetime.datetime(year=now.year, month=now.month, day=now.day, hour=nighttime_tuple[0].hour, minute=nighttime_tuple[0].minute)
+    end = datetime.datetime(year=now.year, month=now.month, day=now.day, hour=nighttime_tuple[1].hour, minute=nighttime_tuple[1].minute)
+    end = end + datetime.timedelta(days=1)
+
+    once = False
+    loop_counter = 0
+    if glob_debug:
+        print("Now is: ", now)
+        print("Start sleeping is sheduled for:", start)
+        print("End sleeping is sheduled for:", end)
+    while now >= start and now < end:
+        if not once:
+            print("Starting Nighttime sleep. Ends at:", end)
+            print("Sleeping...", sep='', end='', flush=True)
+            once = True
+        loop_counter += 1
+        if loop_counter % 60 == 0:
+            print(".", sep='', end='', flush=True)
+        time.sleep(30)
+    print("\n")
+
 def main():
     args = parse_arguments()
     global glob_debug
@@ -275,6 +322,12 @@ def main():
     global glob_message_changed
     global glob_message_all_time_low
     global glob_message_title
+
+    try:
+        nighttime_tuple = nighttime_to_tuple(config['nighttime'])
+    except ValueError:
+        print("Exiting now!")
+        exit()
 
     try:
         glob_message_all_time_low = config['email']['message_all_time_low']
@@ -305,6 +358,8 @@ def main():
 
     if args.endless:
         while(True):
+            if not args.nighttime:
+                wait_nighttime(nighttime_tuple)
             if(update_items(config['items'], config['email'], args.dump_html)):
                 write_config(args.config, config)
             sys.stdout.flush()

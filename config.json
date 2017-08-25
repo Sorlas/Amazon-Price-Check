@@ -1,4 +1,8 @@
 {
+    "nighttime": {
+        "start": "23:32",
+        "stop": "6:00"
+    },
     "email": {
         "message_all_time_low": "Article: %s reached an all time low of %s\n%s",
         "message_changed": "Article: %s price has changed to %s\n%s",
@@ -6,7 +10,7 @@
         "password": "PASSWORD",
         "smtp_url": "SMPT-URL",
         "user": "USERNAME",
-		"receiver": "testemail@testmail.cc.gg.test"
+        "receiver": "testemail@testmail.cc.gg.test",
     },
     "items": [
         {
