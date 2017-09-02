@@ -310,6 +310,7 @@ def wait_nighttime(nighttime_tuple):
         if loop_counter % 60 == 0:
             print(".", sep='', end='', flush=True)
         time.sleep(30)
+        now = datetime.datetime.now()
     print("\n")
 
 def main():

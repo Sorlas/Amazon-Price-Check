@@ -10,7 +10,7 @@
         "password": "PASSWORD",
         "smtp_url": "SMPT-URL",
         "user": "USERNAME",
-        "receiver": "testemail@testmail.cc.gg.test"
+        "receiver": "testemail@testmail.cc.gg.test, testmail2@testmail.cc.gg.test"
     },
     "items": [
         {
