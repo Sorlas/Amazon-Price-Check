@@ -31,7 +31,7 @@
             ],
             "listid": 1,
             "notify_on_every_change": "True",
-            "regex": "<span id=\"priceblock_(our|sale)price\" class=\"a-size-medium a-color-price\">\\w+\\s(\\d+,\\d+)"
+            "regex": "<span id=\"priceblock_(our|sale)price\" class=\"a-size-medium a-color-price\">\\w+\\s(\\d+(\\.?\\d+)+\\,?\\d+)"
         },
         {
             "historyfile": "Alternate_history.txt",
@@ -45,7 +45,7 @@
             ],
             "listid": 0,
             "notify_on_every_change": "True",
-            "regex": "<span itemprop=\"price\" content=\"(\\d+.\\d+)"
+            "regex": "<span itemprop=\"price\" content=\"(\\d+(\\.?\\d+)+\\,?\\d+)"
         }
     ]
 }

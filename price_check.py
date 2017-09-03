@@ -45,7 +45,13 @@ def send_email(price, url, article, email_credentials, new_alltime_low_bool=Fals
         part = MIMEText(text, 'plain', _charset='utf-8')
         msg.attach(part)
         try:
-            s.sendmail(str(email_credentials['user']), str(email_credentials['user']), msg.as_string())
+            emaillist = email_credentials['receiver'].split(";")
+            if type(emaillist) == list:
+                to = emaillist
+        except Exception:
+            to = email_credentials['receiver']
+        try:
+            s.sendmail(str(email_credentials['user']), to, msg.as_string())
             print('Message has been sent.')
             s.quit()
         except Exception as e:
@@ -119,6 +125,9 @@ def update_items(items, email_credentials, html_dump):
 
             print('\nChecking', item_name)
             current_price = get_price(item_url, current_regex, current_listid, html_dump, item_name)
+            if current_price == 0:
+                #get_price return 0 when a error occurs
+                continue
             if (current_price < all_time_low_price):
                 print('New price is', current_price, '!!')
                 all_time_low_price = current_price
@@ -246,17 +255,25 @@ def get_price(URL, regex, regex_price_id, html_dump, item_name):
     #If Object is just a list
     try:
         price = price_string[regex_price_id]
+        #Necessary to delete . in the price string to avoid cast exception
+        #This is the case when a price is greater equal 1000 (e.g. 1.000,50)
+        #This needs to be adapted in case you get english numbers
+        price = price.replace('.', '')
         price = float(price.replace(',', '.'))
         return price
     except Exception:
         #If object is a tuple in a list. Thats the case when re.findall() returns multiple results
         try:
             price = price_string[0][regex_price_id]
+            price = price.replace('.', '')
             price = float(price.replace(',', '.'))
             return price
         except Exception as e:
-            print("ERROR: Cannot find price string")
-            print("Price String was:", price)
+            print("ERROR during handling the price string")
+            if price:
+                print("Price string was:", price)
+            else:
+                print("Price string uninitialized")
             print(e)
             return 0
 
